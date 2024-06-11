@@ -1,41 +1,35 @@
 const bcrypt = require('bcrypt');
 const User = require('../models/user');
 
-// Signup
 exports.signup = async (req, res) => {
   try {
     const hashedPassword = await bcrypt.hash(req.body.password, 10);
     const user = await User.create({
       username: req.body.username,
-      password: hashedPassword
+      email: req.body.email,
+      password: hashedPassword,
     });
-    req.session.userId = user.id;
-    res.redirect('/dashboard');
+    res.status(201).json(user);
   } catch (error) {
-    console.error(error);
-    res.status(500).send('Error signing up');
+    res.status(400).json({ error: error.message });
   }
 };
 
-// Login
 exports.login = async (req, res) => {
   try {
-    const user = await User.findOne({ where: { username: req.body.username } });
-    if (user && (await bcrypt.compare(req.body.password, user.password))) {
+    const user = await User.findOne({ where: { email: req.body.email } });
+    if (user && await bcrypt.compare(req.body.password, user.password)) {
       req.session.userId = user.id;
-      res.redirect('/dashboard');
+      res.json(user);
     } else {
-      res.status(401).send('Invalid username or password');
+      res.status(401).json({ error: 'Invalid email or password' });
     }
   } catch (error) {
-    console.error(error);
-    res.status(500).send('Error logging in');
+    res.status(400).json({ error: error.message });
   }
 };
 
-// Logout
 exports.logout = (req, res) => {
-  req.session.destroy(() => {
-    res.redirect('/');
-  });
+  req.session.destroy();
+  res.status(200).send('Logged out');
 };
